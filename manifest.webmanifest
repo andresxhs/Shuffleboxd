@@ -1,0 +1,15 @@
+{
+  "name": "Shuffleboxd",
+  "short_name": "Shuffleboxd",
+  "description": "Elige al azar una película de tu Watchlist o listas de Letterboxd.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#14181c",
+  "theme_color": "#14181c",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
