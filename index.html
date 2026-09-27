@@ -222,7 +222,6 @@ let lists=LS.get('lists',[]),sel=LS.get('sel',null),key=LS.get('key',''),mcache=
 let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('show'),2600)}
 function haptic(){try{navigator.vibrate&&navigator.vibrate(12);$('#hl').click()}catch{}}
 const rnd=n=>crypto.getRandomValues(new Uint32Array(1))[0]%n;
-function shuffle(a){for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]]}return a}
 
 // ---------- import: zip + csv (no dependencies) ----------
 async function unzip(buf){
@@ -340,18 +339,17 @@ const fmtRt=m=>m>=60?`${Math.floor(m/60)} h ${m%60?m%60+' min':''}`.trim():m+' m
 // ---------- pick ----------
 let rolling=false;
 function nextIndex(l){
-  let bag=LS.get('bag.'+l.id,null);const last=LS.get('last.'+l.id,-1),N=l.films.length;
-  if(!Array.isArray(bag)||!bag.length||bag.some(i=>i>=N)){
-    bag=shuffle([...Array(N).keys()]);
-    if(N>1&&bag[bag.length-1]===last)[bag[0],bag[bag.length-1]]=[bag[bag.length-1],bag[0]];
-  }
-  const i=bag.pop();LS.set('bag.'+l.id,bag);LS.set('last.'+l.id,i);
-  return{i,left:bag.length};
+  // Fully random each time; only avoids showing the same film twice in a row.
+  const last=LS.get('last.'+l.id,-1),N=l.films.length;
+  let i=rnd(N);
+  if(N>1&&i===last)i=(i+1+rnd(N-1))%N;
+  LS.set('last.'+l.id,i);
+  return{i};
 }
 async function pick(){
   const l=lists.find(x=>x.id===sel);if(rolling||!l)return;
   rolling=true;haptic();
-  const{i,left}=nextIndex(l),f=l.films[i],R=$('#result');
+  const{i}=nextIndex(l),f=l.films[i],R=$('#result');
   R.hidden=false;R.classList.add('rolling');$('#btnAgain').disabled=true;
   $('#rList').textContent=l.name;$('#rCount').textContent='';
   const P=$('#rPoster');P.className='poster loading';P.innerHTML='';
@@ -360,10 +358,10 @@ async function pick(){
   const t0=performance.now();let d=40;
   await new Promise(done=>{const step=()=>{$('#rTitle').textContent=l.films[rnd(N(l))].n;d*=1.13;if(performance.now()-t0>1050)return done();setTimeout(step,d)};step()});
   const m=await metaP,img=m&&m.p?await loadImg(IMG+'w780'+m.p,6000):null;
-  show(f,m,img,left);rolling=false;$('#btnAgain').disabled=false;
+  show(f,m,img,l);rolling=false;$('#btnAgain').disabled=false;
 }
 const N=l=>l.films.length;
-function show(f,m,img,left){
+function show(f,m,img,l){
   const R=$('#result');R.classList.remove('rolling');
   const P=$('#rPoster');P.className='poster reveal';P.innerHTML='';
   if(img){img.alt=f.n;P.append(img)}else P.innerHTML=`<div class="ph"><small>${esc(f.y)}</small>${esc(f.n)}</div>`;
@@ -379,7 +377,7 @@ function show(f,m,img,left){
   else if(!key)ov.innerHTML='Añade tu clave gratuita de TMDB en <button data-act="settings">Ajustes</button> para ver póster, director y sinopsis.';
   else ov.textContent='';
   $('#rLink').href=f.u||`https://letterboxd.com/search/films/${encodeURIComponent(f.n)}/`;$('#rLink').classList.remove('hide');
-  $('#rCount').textContent=left?`${left} más sin repetir`:'Ronda completa ✓';
+  $('#rCount').textContent=`al azar entre ${N(l)}`;
   const I=$('#rInfo');void I.offsetWidth;I.classList.add('show');
   $('.r-body').scrollTop=0;haptic();
 }
